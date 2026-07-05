@@ -1,0 +1,8 @@
+@read1 this record is malformed on purpose
+ACGTACGTACGTAGGCTAGCTAGCTAGCTAGC
++
+IIIIIIIIII
+@read2 sequence and quality lengths do not match above
+GCGCGCATATATATGCGC
++
+IIIIIIIIIIIIIIIIII

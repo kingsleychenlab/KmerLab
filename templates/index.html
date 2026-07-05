@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}KmerLab — Analyzer{% endblock %}
+{% block nav_home %}active{% endblock %}
+
+{% block content %}
+<section class="intro">
+  <h1>KmerLab</h1>
+  <p class="lead">
+    A local k-mer frequency analyzer for FASTA and FASTQ files. Upload a
+    sequence file, choose a value of <em>k</em>, and get counts, summary
+    statistics, and visualizations — all computed on your own machine.
+  </p>
+</section>
+
+<section class="panel">
+  <h2>Analyze a file</h2>
+  <form id="analyze-form">
+    <div class="field">
+      <label for="file">Sequence file (.fa, .fasta, .fq, .fastq, optionally .gz)</label>
+      <input type="file" id="file" name="file" accept=".fa,.fasta,.fq,.fastq,.gz,.txt">
+      <div class="sample-loader">
+        <span>or load a sample:</span>
+        <select id="sample-select"><option value="">— choose a sample —</option></select>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="field small">
+        <label for="k">k (k-mer length)</label>
+        <input type="number" id="k" name="k" value="4" min="1" max="31">
+      </div>
+      <div class="field small">
+        <label for="top_n">Top N k-mers</label>
+        <input type="number" id="top_n" name="top_n" value="20" min="1" max="200">
+      </div>
+      <div class="field checks">
+        <label class="check">
+          <input type="checkbox" id="canonical" name="canonical">
+          Canonical k-mers (merge reverse complements)
+        </label>
+        <label class="check">
+          <input type="checkbox" id="include_ambiguous" name="include_ambiguous">
+          Include ambiguous bases (N, etc.)
+        </label>
+        <label class="check">
+          <input type="checkbox" id="fcgr" name="fcgr" checked>
+          Render FCGR heatmap (k ≤ 8)
+        </label>
+      </div>
+    </div>
+
+    <button type="submit" class="btn primary" id="analyze-btn">Analyze</button>
+  </form>
+</section>
+
+<div id="error-panel" class="error-panel hidden"></div>
+<div id="loading" class="loading hidden">Counting k-mers…</div>
+
+<section id="results" class="results hidden">
+  <h2>Results</h2>
+
+  <div class="cards" id="summary-cards"></div>
+
+  <div class="warnings hidden" id="warnings"></div>
+
+  <div class="export-row">
+    <button class="btn" id="export-csv">Export k-mer counts (CSV)</button>
+    <button class="btn" id="export-json">Export summary (JSON)</button>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-box">
+      <h3>Top k-mers</h3>
+      <img id="chart-top" alt="Top k-mers bar chart">
+    </div>
+    <div class="chart-box">
+      <h3>Frequency spectrum</h3>
+      <img id="chart-hist" alt="k-mer frequency histogram">
+    </div>
+    <div class="chart-box" id="fcgr-box">
+      <h3>FCGR heatmap</h3>
+      <img id="chart-fcgr" alt="FCGR heatmap">
+    </div>
+  </div>
+
+  <div class="table-box">
+    <h3>Top k-mer frequency table</h3>
+    <table id="kmer-table">
+      <thead><tr><th>#</th><th>k-mer</th><th>Count</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='main.js') }}"></script>
+<script>KmerLab.initAnalyzer();</script>
+{% endblock %}

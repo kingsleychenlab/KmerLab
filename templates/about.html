@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}KmerLab — About / Method{% endblock %}
+{% block nav_about %}active{% endblock %}
+
+{% block content %}
+<section class="intro">
+  <h1>About &amp; Method</h1>
+  <p class="lead">
+    KmerLab is a small, local, open-source utility for exploring the k-mer
+    composition of DNA sequence files. This page explains the concepts and the
+    math behind the numbers.
+  </p>
+</section>
+
+<article class="prose">
+  <h2>What is a k-mer?</h2>
+  <p>
+    A <strong>k-mer</strong> is a substring of length <em>k</em> taken from a
+    longer sequence. For the sequence <code>ACGTA</code> with <em>k</em> = 3, the
+    k-mers are <code>ACG</code>, <code>CGT</code>, and <code>GTA</code> — a
+    sliding window of width <em>k</em> moved one base at a time. Counting how
+    often each k-mer appears gives a compact, alignment-free "fingerprint" of a
+    sequence dataset. k-mer profiles are used for genome assembly, error
+    detection, taxonomic classification, contamination screening, and more.
+  </p>
+
+  <h2>Canonical k-mers</h2>
+  <p>
+    DNA is double-stranded, so a k-mer and its reverse complement usually
+    represent the same physical sequence read from opposite strands. The
+    <strong>reverse complement</strong> swaps A↔T and C↔G and reverses the
+    string: the reverse complement of <code>AAT</code> is <code>ATT</code>. A
+    <strong>canonical k-mer</strong> is the lexicographically smaller of a k-mer
+    and its reverse complement. Counting canonical k-mers merges both strand
+    orientations into one count, which is standard practice in tools like KMC and
+    Jellyfish.
+  </p>
+
+  <h2>GC content</h2>
+  <p>
+    GC content is the fraction of bases that are G or C. KmerLab computes it over
+    A/C/G/T bases only, so ambiguous characters do not distort the ratio.
+  </p>
+
+  <h2>Jaccard similarity</h2>
+  <p>
+    Jaccard similarity compares two files by the <em>sets</em> of k-mers they
+    contain, ignoring how often each appears:
+  </p>
+  <p class="formula">J(A, B) = |A ∩ B| / |A ∪ B|</p>
+  <p>
+    It ranges from 0 (no shared k-mers) to 1 (identical k-mer sets). It is a good
+    quick measure of overlap but is sensitive to sequencing depth and errors,
+    which introduce many low-count k-mers.
+  </p>
+
+  <h2>Cosine similarity</h2>
+  <p>
+    Cosine similarity compares the k-mer <em>frequency vectors</em> — it accounts
+    for how many times each k-mer occurs, not just presence/absence:
+  </p>
+  <p class="formula">cos(A, B) = (A · B) / (‖A‖ · ‖B‖)</p>
+  <p>
+    Each file is represented as a vector indexed by k-mer, with counts as values.
+    The metric ranges from 0 (orthogonal) to 1 (identical direction / proportional
+    composition). Because it uses counts, it captures compositional similarity
+    even when absolute depths differ.
+  </p>
+
+  <h2>Frequency Chaos Game Representation (FCGR)</h2>
+  <p>
+    FCGR maps k-mer frequencies onto a 2<sup>k</sup> × 2<sup>k</sup> grid where
+    each cell corresponds to one k-mer, placed by recursively subdividing a square
+    with corners A, C, G, T. The result is a texture-like image that reveals
+    compositional patterns at a glance. KmerLab renders it for k ≤ 8.
+  </p>
+
+  <h2>Limitations</h2>
+  <ul>
+    <li>Files are processed <strong>in memory</strong>; very large genomes may
+        exceed available RAM. A streaming mode is planned.</li>
+    <li>The default upload cap is 50 MB in the web UI.</li>
+    <li>Exact counting is used (no probabilistic sketching), so memory scales with
+        the number of distinct k-mers and with <em>k</em>.</li>
+    <li>Only nucleotide sequences are supported; protein k-mers are not (yet).</li>
+    <li>Similarity metrics are only meaningful when both files use the same
+        <em>k</em> and canonical setting.</li>
+  </ul>
+
+  <h2>Privacy &amp; independence</h2>
+  <p>
+    KmerLab makes no network requests. There is no database, no login, no cloud
+    storage, and no API keys. Your sequence data never leaves your computer.
+  </p>
+</article>
+{% endblock %}

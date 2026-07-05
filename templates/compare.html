@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}KmerLab — Compare{% endblock %}
+{% block nav_compare %}active{% endblock %}
+
+{% block content %}
+<section class="intro">
+  <h1>Compare two files</h1>
+  <p class="lead">
+    Count k-mers in two FASTA/FASTQ files and measure how similar their k-mer
+    profiles are using Jaccard and cosine similarity.
+  </p>
+</section>
+
+<section class="panel">
+  <form id="compare-form">
+    <div class="two-col">
+      <div class="field">
+        <label for="file_a">File A</label>
+        <input type="file" id="file_a" name="file_a" accept=".fa,.fasta,.fq,.fastq,.gz,.txt">
+        <div class="sample-loader">
+          <span>or sample:</span>
+          <select id="sample-a"><option value="">— choose —</option></select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="file_b">File B</label>
+        <input type="file" id="file_b" name="file_b" accept=".fa,.fasta,.fq,.fastq,.gz,.txt">
+        <div class="sample-loader">
+          <span>or sample:</span>
+          <select id="sample-b"><option value="">— choose —</option></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="field small">
+        <label for="k-cmp">k (k-mer length)</label>
+        <input type="number" id="k-cmp" name="k" value="4" min="1" max="31">
+      </div>
+      <div class="field checks">
+        <label class="check">
+          <input type="checkbox" id="canonical-cmp" name="canonical">
+          Canonical k-mers
+        </label>
+        <label class="check">
+          <input type="checkbox" id="ambiguous-cmp" name="include_ambiguous">
+          Include ambiguous bases
+        </label>
+      </div>
+    </div>
+
+    <button type="submit" class="btn primary" id="compare-btn">Compare</button>
+  </form>
+</section>
+
+<div id="error-panel" class="error-panel hidden"></div>
+<div id="loading" class="loading hidden">Comparing k-mer profiles…</div>
+
+<section id="compare-results" class="results hidden">
+  <h2>Comparison</h2>
+  <div class="cards" id="compare-cards"></div>
+
+  <div class="export-row">
+    <button class="btn" id="export-cmp-json">Export comparison (JSON)</button>
+    <button class="btn" id="export-cmp-csv">Export comparison (CSV)</button>
+  </div>
+
+  <div class="two-col" id="file-stats"></div>
+
+  <div class="chart-box">
+    <h3>Top k-mers: File A vs File B</h3>
+    <img id="chart-compare" alt="Comparison bar chart">
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='main.js') }}"></script>
+<script>KmerLab.initCompare();</script>
+{% endblock %}

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}KmerLab{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="{{ url_for('index') }}">
+        <span class="brand-mark">Kmer</span><span class="brand-mark-alt">Lab</span>
+      </a>
+      <nav class="nav">
+        <a href="{{ url_for('index') }}" class="{% block nav_home %}{% endblock %}">Analyzer</a>
+        <a href="{{ url_for('compare_page') }}" class="{% block nav_compare %}{% endblock %}">Compare</a>
+        <a href="{{ url_for('about_page') }}" class="{% block nav_about %}{% endblock %}">About / Method</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>
+        KmerLab v{{ version }} — a local, open-source k-mer analysis utility.
+        No cloud, no database, no login, no API keys. Everything runs on your machine.
+      </p>
+    </div>
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
