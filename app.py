@@ -4,7 +4,7 @@ A local-only web UI for k-mer frequency analysis of FASTA/FASTQ files. No
 network access, database, authentication, or cloud services are used. Uploaded
 files are processed in memory and never persisted to disk.
 
-Run with:  python app.py   (then open http://127.0.0.1:5000)
+Run with:  python app.py   (then open http://127.0.0.1:5001)
 """
 
 from __future__ import annotations
@@ -306,4 +306,4 @@ def too_large(_error):
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5001, debug=True)

@@ -71,7 +71,7 @@ pip install -r requirements-lock.txt
 python app.py
 ```
 
-Open **http://127.0.0.1:5000** (binds to localhost only).
+Open **http://127.0.0.1:5001** (binds to localhost only).
 
 ## Test
 
