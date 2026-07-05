@@ -20,6 +20,24 @@ def test_reverse_complement():
     assert reverse_complement("GATTACA") == "TGTAATC"
 
 
+def test_reverse_complement_iupac():
+    # R(A/G)<->Y(C/T), S<->S, W<->W, K(G/T)<->M(A/C), B<->V, D<->H, N<->N.
+    assert reverse_complement("R") == "Y"
+    assert reverse_complement("Y") == "R"
+    assert reverse_complement("S") == "S"
+    assert reverse_complement("W") == "W"
+    assert reverse_complement("K") == "M"
+    assert reverse_complement("M") == "K"
+    assert reverse_complement("B") == "V"
+    assert reverse_complement("D") == "H"
+    assert reverse_complement("N") == "N"
+    # Combined: reverse then complement each code.
+    assert reverse_complement("ACGTN") == "NACGT"
+    assert reverse_complement("RYSWKM") == "KMWSRY"
+    # Lower-case is preserved.
+    assert reverse_complement("acgt") == "acgt"
+
+
 def test_canonical():
     assert canonical("AAT") == "AAT"  # rc is ATT, AAT < ATT
     assert canonical("TTG") == "CAA"  # rc is CAA, CAA < TTG
@@ -106,4 +124,40 @@ def test_count_kmers_aggregate():
     assert result.n_bases == 8
     assert result.counts["AC"] == 2
     assert result.unique_kmers == 3
-    assert result.total_kmers == 6
+    assert result.counted_kmers == 6
+
+
+def test_renamed_metric_fields_present():
+    """The result object exposes the clarified field names."""
+    result = count_kmers([SeqRecord(id="r", sequence="ACNGT")], 2)
+    assert hasattr(result, "counted_kmers")
+    assert hasattr(result, "skipped_kmers")
+    assert hasattr(result, "invalid_base_count")
+    # ACNGT, k=2: AC counted, CN/NG skipped, GT counted; 1 invalid base (N).
+    assert result.counted_kmers == 2
+    assert result.skipped_kmers == 2
+    assert result.invalid_base_count == 1
+
+
+def test_canonical_with_ambiguous_included():
+    """Canonical mode must handle IUPAC codes when ambiguous bases are counted."""
+    # ACN and its reverse complement NGT -> canonical is min("ACN","NGT")="ACN".
+    counts = Counter()
+    count_kmers_in_sequence(
+        "ACN", 3, counts, canonical_mode=True, include_ambiguous=True
+    )
+    assert list(counts) == ["ACN"]
+    assert counts["ACN"] == 1
+
+
+def test_ambiguous_excluded_skips_iupac():
+    """With ambiguous excluded, any k-mer with a non-ACGT base is skipped."""
+    counts = Counter()
+    counted, skipped, invalid = count_kmers_in_sequence(
+        "ACRGT", 2, counts, include_ambiguous=False
+    )
+    # windows AC, CR, RG, GT -> CR and RG dropped (contain R).
+    assert counted == 2
+    assert skipped == 2
+    assert invalid == 1
+    assert set(counts) == {"AC", "GT"}

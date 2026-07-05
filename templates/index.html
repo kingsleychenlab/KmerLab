@@ -53,20 +53,20 @@
       <div class="field" style="grid-column: span 2; min-width: 260px;">
         <label>Options</label>
         <div class="toggles">
-          <label class="toggle">
+          <label class="toggle" title="Count each k-mer together with its reverse complement (IUPAC-aware). Standard for double-stranded DNA.">
             <input type="checkbox" id="canonical" name="canonical">
             <span class="switch"></span>
-            <span>Canonical k-mers <span class="t-sub">merge reverse complements</span></span>
+            <span>Canonical reverse-complement mode <span class="t-sub">merge each k-mer with its reverse complement</span></span>
           </label>
-          <label class="toggle">
+          <label class="toggle" title="When on, k-mers containing IUPAC ambiguity codes (N, R, Y, …) are counted. When off, any window with a non-ACGT base is skipped.">
             <input type="checkbox" id="include_ambiguous" name="include_ambiguous">
             <span class="switch"></span>
-            <span>Include ambiguous bases <span class="t-sub">count k-mers with N, etc.</span></span>
+            <span>Include ambiguous IUPAC bases <span class="t-sub">count k-mers containing N, R, Y, …</span></span>
           </label>
-          <label class="toggle">
+          <label class="toggle" title="Frequency Chaos Game Representation, normalized to relative frequency. Limited to k ≤ 8 because the image is a 2^k × 2^k grid.">
             <input type="checkbox" id="fcgr" name="fcgr" checked>
             <span class="switch"></span>
-            <span>FCGR heatmap <span class="t-sub">rendered for k ≤ 8</span></span>
+            <span>FCGR normalized frequency heatmap <span class="t-sub">rendered for k ≤ 8 (2^k × 2^k grid)</span></span>
           </label>
         </div>
       </div>
@@ -90,6 +90,14 @@
 
   <div class="cards" id="summary-cards"></div>
 
+  <div class="panel hidden" id="quality-panel" style="margin-bottom:22px;">
+    <div class="panel-head">
+      <h2>FASTQ quality summary</h2>
+      <span class="hint">Phred+33 encoding</span>
+    </div>
+    <div class="cards" id="quality-cards"></div>
+  </div>
+
   <div class="warnings hidden" id="warnings"></div>
 
   <div class="export-row">
@@ -103,12 +111,12 @@
       <img id="chart-top" alt="Top k-mers bar chart">
     </div>
     <div class="chart-box">
-      <h3>Frequency spectrum</h3>
-      <img id="chart-hist" alt="k-mer frequency histogram">
+      <h3>K-mer spectrum</h3>
+      <img id="chart-spectrum" alt="k-mer spectrum: distinct k-mers per multiplicity">
     </div>
     <div class="chart-box" id="fcgr-box">
-      <h3>FCGR heatmap</h3>
-      <img id="chart-fcgr" alt="FCGR heatmap">
+      <h3>FCGR normalized frequency heatmap</h3>
+      <img id="chart-fcgr" alt="FCGR normalized frequency heatmap">
     </div>
   </div>
 

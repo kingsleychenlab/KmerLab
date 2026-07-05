@@ -5,8 +5,10 @@ import gzip
 import pytest
 
 from kmerlab.sequence_parser import (
+    DecompressionLimitError,
     ParseError,
     detect_format_from_text,
+    gunzip_bytes_safe,
     open_maybe_gzip,
     parse_fasta,
     parse_fastq,
@@ -73,6 +75,12 @@ def test_malformed_fastq_bad_header():
         list(parse_fastq(bad.splitlines()))
 
 
+def test_malformed_fastq_missing_plus():
+    bad = "@r1\nACGT\n-\nIIII\n"  # third line not '+'
+    with pytest.raises(ParseError, match="must start with '\\+'"):
+        list(parse_fastq(bad.splitlines()))
+
+
 def test_fasta_data_before_header():
     with pytest.raises(ParseError, match="before any '>' header"):
         list(parse_fasta("ACGT\n>s1\nACGT\n".splitlines()))
@@ -97,3 +105,22 @@ def test_gzip_roundtrip(tmp_path):
     with open_maybe_gzip(str(path)) as fh:
         content = fh.read()
     assert content == FASTA
+
+
+def test_gunzip_bytes_safe_roundtrip():
+    raw = gzip.compress(FASTA.encode())
+    assert gunzip_bytes_safe(raw) == FASTA.encode()
+
+
+def test_gunzip_bytes_safe_limit():
+    # A highly compressible payload that decompresses past a tiny limit.
+    big = ("A" * 100_000).encode()
+    raw = gzip.compress(big)
+    assert len(raw) < 1000  # compresses tiny...
+    with pytest.raises(DecompressionLimitError, match="safety limit"):
+        gunzip_bytes_safe(raw, limit=1000)  # ...but exceeds a 1000-byte cap
+
+
+def test_gunzip_bytes_safe_corrupt():
+    with pytest.raises(ParseError, match="Could not decompress"):
+        gunzip_bytes_safe(b"\x1f\x8b not really gzip")

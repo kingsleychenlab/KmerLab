@@ -14,7 +14,7 @@ from .metrics import ComparisonResult
 
 def kmer_counts_dataframe(result: KmerResult, sort: bool = True) -> pd.DataFrame:
     """Build a pandas DataFrame of k-mer counts and relative frequencies."""
-    total = result.total_kmers or 1
+    total = result.counted_kmers or 1
     items = result.counts.most_common() if sort else list(result.counts.items())
     df = pd.DataFrame(items, columns=["kmer", "count"])
     if df.empty:

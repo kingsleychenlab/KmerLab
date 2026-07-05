@@ -123,6 +123,21 @@ const KmerLab = (function () {
     box.classList.remove("hidden");
   }
 
+  // FASTQ quality summary (hidden for FASTA input, where quality is null).
+  function renderQuality(q) {
+    const panel = $("quality-panel");
+    if (!panel) return;
+    if (!q) { panel.classList.add("hidden"); return; }
+    $("quality-cards").innerHTML = [
+      card("Reads", fmt(q.reads)),
+      card("Avg read length", q.avg_read_length.toFixed(1)),
+      card("Avg quality", q.avg_quality.toFixed(1)),
+      card("Min quality", fmt(q.min_quality)),
+      card("Max quality", fmt(q.max_quality)),
+    ].join("");
+    panel.classList.remove("hidden");
+  }
+
   // ---------------------------------------------------------------- Analyzer
   function initAnalyzer() {
     const form = $("analyze-form");
@@ -169,12 +184,14 @@ const KmerLab = (function () {
         card("Format", s.format.toUpperCase()),
         card("Sequences", fmt(s.total_sequences)),
         card("Total bases", fmt(s.total_bases)),
-        card("Valid k-mers", fmt(s.total_kmers)),
+        card("Counted k-mers", fmt(s.counted_kmers)),
         card("Unique k-mers", fmt(s.unique_kmers)),
-        card("GC content", (s.gc_content * 100).toFixed(1) + "%"),
-        card("Skipped k-mers", fmt(s.skipped_kmers)),
-        card("Invalid bases", fmt(s.invalid_bases)),
+        card("GC content (A/C/G/T)", (s.gc_content * 100).toFixed(1) + "%"),
+        card("Skipped windows", fmt(s.skipped_kmers)),
+        card("Ambiguous / invalid bases", fmt(s.invalid_base_count)),
       ].join("");
+
+      renderQuality(s.quality);
 
       const warn = $("warnings");
       if (s.warnings && s.warnings.length) {
@@ -183,7 +200,7 @@ const KmerLab = (function () {
       } else warn.classList.add("hidden");
 
       $("chart-top").src = data.charts.top_bar;
-      $("chart-hist").src = data.charts.histogram;
+      $("chart-spectrum").src = data.charts.spectrum;
       if (data.charts.fcgr) {
         $("chart-fcgr").src = data.charts.fcgr;
         $("fcgr-box").classList.remove("hidden");

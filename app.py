@@ -29,11 +29,16 @@ from kmerlab.exports import (
 )
 from kmerlab.kmer_counter import count_kmers, validate_k
 from kmerlab.metrics import compare_profiles, summarize
-from kmerlab.sequence_parser import ParseError, parse_text
+from kmerlab.sequence_parser import (
+    MAX_DECOMPRESSED_BYTES,
+    ParseError,
+    gunzip_bytes_safe,
+    parse_text,
+)
 from kmerlab.visualizations import (
     comparison_bar,
     fcgr_heatmap,
-    frequency_histogram,
+    kmer_spectrum,
     top_kmers_bar,
 )
 
@@ -76,12 +81,10 @@ def _read_upload(field_name: str) -> str:
         if not raw:
             raise ApiError(f"Uploaded file '{file.filename}' is empty.")
         if raw[:2] == b"\x1f\x8b":  # gzip magic bytes
-            import gzip
-
             try:
-                raw = gzip.decompress(raw)
-            except OSError as exc:
-                raise ApiError(f"Could not decompress gzip file: {exc}")
+                raw = gunzip_bytes_safe(raw, limit=MAX_DECOMPRESSED_BYTES)
+            except ParseError as exc:
+                raise ApiError(str(exc))
         return raw.decode("utf-8", errors="replace")
 
     # Fallback: pasted text (used by the sample loader and manual entry).
@@ -168,7 +171,7 @@ def api_analyze():
 
         charts = {
             "top_bar": top_kmers_bar(result, top_n),
-            "histogram": frequency_histogram(result),
+            "spectrum": kmer_spectrum(result),
         }
         if want_fcgr:
             charts["fcgr"] = fcgr_heatmap(result)

@@ -36,10 +36,24 @@
     Jellyfish.
   </p>
 
+  <h2>IUPAC ambiguous bases</h2>
+  <p>
+    Real sequence files contain more than A/C/G/T. The
+    <strong>IUPAC</strong> codes represent uncertainty: <code>N</code> is any
+    base, <code>R</code> is A/G, <code>Y</code> is C/T, and so on. KmerLab is
+    aware of the full alphabet (<code>ACGTRYSWKMBDHVN</code>) and complements
+    ambiguity codes correctly (e.g. <code>R↔Y</code>, <code>K↔M</code>,
+    <code>B↔V</code>, <code>D↔H</code>; <code>S</code>, <code>W</code>,
+    <code>N</code> are self-complementary). By default, any k-mer window
+    containing a non-ACGT character is <strong>skipped</strong> and reported as a
+    skipped window. Turn on <em>Include ambiguous IUPAC bases</em> to count them
+    instead.
+  </p>
+
   <h2>GC content</h2>
   <p>
-    GC content is the fraction of bases that are G or C. KmerLab computes it over
-    A/C/G/T bases only, so ambiguous characters do not distort the ratio.
+    GC content is the fraction of bases that are G or C, computed over A/C/G/T
+    bases only so ambiguous characters do not distort the ratio.
   </p>
 
   <h2>Jaccard similarity</h2>
@@ -67,12 +81,26 @@
     even when absolute depths differ.
   </p>
 
-  <h2>Frequency Chaos Game Representation (FCGR)</h2>
+  <h2>K-mer spectrum</h2>
+  <p>
+    The <strong>k-mer spectrum</strong> plots how many <em>distinct</em> k-mers
+    occur exactly once, exactly twice, three times, and so on. The x-axis is the
+    k-mer multiplicity (occurrence count) and the y-axis is the number of
+    distinct k-mers at that multiplicity. KmerLab uses <em>exact</em> integer
+    multiplicities — not histogram bins — so counts are never merged. The shape
+    of the spectrum is used to estimate coverage, detect errors, and spot
+    repeats (as in KAT and Jellyfish).
+  </p>
+
+  <h2>FCGR normalized frequency heatmap</h2>
   <p>
     FCGR maps k-mer frequencies onto a 2<sup>k</sup> × 2<sup>k</sup> grid where
     each cell corresponds to one k-mer, placed by recursively subdividing a square
-    with corners A, C, G, T. The result is a texture-like image that reveals
-    compositional patterns at a glance. KmerLab renders it for k ≤ 8.
+    with corners A, C, G, T. KmerLab <strong>normalizes</strong> each cell to a
+    relative frequency (raw count divided by the total number of counted k-mers)
+    so the colour scale is comparable across datasets. It is rendered for
+    <strong>k ≤ 8</strong>: the image is a 2<sup>k</sup> × 2<sup>k</sup> grid, so
+    larger k would produce an impractically huge image.
   </p>
 
   <h2>Limitations</h2>

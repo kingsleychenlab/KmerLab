@@ -11,7 +11,13 @@ Public API
 - ``parse_fasta``          : yield ``SeqRecord`` for each FASTA entry.
 - ``parse_fastq``          : yield ``SeqRecord`` for each FASTQ entry.
 - ``parse_file``           : auto-detect format and yield ``SeqRecord``.
+- ``gunzip_bytes_safe``    : decompress gzip bytes with a decompressed-size cap.
 - ``ParseError``           : raised for malformed / unsupported input.
+
+The FASTQ parser is deliberately *strict*: every record must be exactly four
+lines (``@header`` / sequence / ``+`` separator / quality) and the sequence and
+quality lengths must match. Malformed records raise :class:`ParseError` naming
+the offending record rather than being silently skipped.
 """
 
 from __future__ import annotations
@@ -24,6 +30,16 @@ from typing import Iterable, Iterator, TextIO
 
 class ParseError(ValueError):
     """Raised when a file cannot be parsed as FASTA or FASTQ."""
+
+
+class DecompressionLimitError(ParseError):
+    """Raised when a gzip stream decompresses beyond the safety limit."""
+
+
+# A gzip file can decompress to many times its on-disk size (a "zip bomb").
+# The upload cap only limits the *compressed* bytes, so we also cap the
+# *decompressed* bytes to keep memory bounded.
+MAX_DECOMPRESSED_BYTES = 100 * 1024 * 1024  # 100 MB
 
 
 @dataclass
@@ -56,6 +72,33 @@ def _looks_gzip(path: str) -> bool:
             return handle.read(2) == _GZIP_MAGIC
     except OSError:
         return False
+
+
+def gunzip_bytes_safe(raw: bytes, limit: int = MAX_DECOMPRESSED_BYTES) -> bytes:
+    """Decompress gzip ``raw`` bytes, aborting if output exceeds ``limit``.
+
+    Reads in 1 MB chunks and stops as soon as the decompressed size would
+    exceed ``limit`` (so a malicious file is never fully expanded in memory).
+    Raises :class:`DecompressionLimitError` on overflow and :class:`ParseError`
+    on a corrupt/invalid gzip stream.
+    """
+    out = bytearray()
+    chunk_size = 1 << 20
+    try:
+        with gzip.GzipFile(fileobj=io.BytesIO(raw)) as gz:
+            while True:
+                chunk = gz.read(chunk_size)
+                if not chunk:
+                    break
+                out.extend(chunk)
+                if len(out) > limit:
+                    raise DecompressionLimitError(
+                        f"Decompressed file exceeds the "
+                        f"{limit // (1024 * 1024)} MB safety limit."
+                    )
+    except (OSError, EOFError) as exc:
+        raise ParseError(f"Could not decompress gzip file: {exc}")
+    return bytes(out)
 
 
 def open_maybe_gzip(path: str) -> TextIO:

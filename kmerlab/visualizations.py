@@ -16,7 +16,7 @@ import matplotlib
 matplotlib.use("Agg")  # headless backend; must be set before pyplot import
 import matplotlib.pyplot as plt  # noqa: E402
 
-from .kmer_counter import KmerResult, reverse_complement  # noqa: E402
+from .kmer_counter import KmerResult  # noqa: E402
 
 # Palette harmonized with the app's nucleotide colour system.
 _ACCENT = "#2f73e0"   # base-C blue: primary single-series colour
@@ -68,26 +68,43 @@ def top_kmers_bar(result: KmerResult, n: int = 20) -> str:
     return _fig_to_data_uri(fig)
 
 
-def frequency_histogram(result: KmerResult, bins: int = 40) -> str:
-    """Histogram of k-mer occurrence counts (the k-mer spectrum).
+def spectrum_data(result: KmerResult) -> tuple[list[int], list[int]]:
+    """Return the exact k-mer spectrum as ``(multiplicities, distinct_counts)``.
 
-    The x-axis is how many times a k-mer occurs; the y-axis is how many distinct
-    k-mers share that occurrence count. This is the classic KAT/Jellyfish
-    k-mer spectrum plot.
+    ``multiplicities[i]`` is a k-mer occurrence count that actually appears in
+    the data; ``distinct_counts[i]`` is how many distinct k-mers have exactly
+    that multiplicity. No binning is applied, so integer multiplicities are
+    never merged.
+    """
+    multiplicity_counts = Counter(result.counts.values())
+    xs = sorted(multiplicity_counts)
+    ys = [multiplicity_counts[m] for m in xs]
+    return xs, ys
+
+
+def kmer_spectrum(result: KmerResult) -> str:
+    """True k-mer spectrum: distinct-k-mer count per exact multiplicity.
+
+    x-axis = k-mer multiplicity (how many times a k-mer occurs), y-axis =
+    number of distinct k-mers with that multiplicity. Unlike a binned
+    histogram, each integer multiplicity is its own bar, so multiplicities are
+    never merged or misrepresented.
     """
     fig, ax = plt.subplots(figsize=(7, 4))
-    counts = list(result.counts.values())
-    if not counts:
+    xs, ys = spectrum_data(result)
+    if not xs:
         ax.text(0.5, 0.5, "No k-mers to display", ha="center", va="center")
         ax.axis("off")
         return _fig_to_data_uri(fig)
-    ax.hist(counts, bins=min(bins, max(1, max(counts))), color=_ACCENT, edgecolor="white", linewidth=0.6)
-    ax.set_xlabel("k-mer occurrence count")
+    ax.bar(xs, ys, width=0.9, color=_ACCENT, edgecolor="white", linewidth=0.4)
+    ax.set_xlabel("k-mer multiplicity")
     ax.set_ylabel("Number of distinct k-mers")
-    ax.set_title(f"{result.k}-mer frequency spectrum", loc="left", fontsize=11, fontweight="bold")
+    ax.set_title(f"K-mer Spectrum (k={result.k})", loc="left", fontsize=11, fontweight="bold")
     _style(ax)
-    if max(counts) > 1:
+    if max(ys) > 10:
         ax.set_yscale("log")
+    if max(xs) > 30:
+        ax.set_xscale("log")
     fig.patch.set_alpha(0)
     return _fig_to_data_uri(fig)
 
@@ -131,15 +148,26 @@ def _fcgr_matrix(counts: Counter, k: int) -> list[list[float]]:
 def fcgr_heatmap(result: KmerResult, max_k: int = 8) -> str | None:
     """Frequency Chaos Game Representation heatmap for DNA k-mers.
 
-    Returns ``None`` when ``k`` is too large to render a sensible grid (a
-    ``2^k x 2^k`` image), otherwise a base64 PNG data URI.
+    Cells are normalized to relative frequency (each raw count divided by the
+    total number of counted k-mers), so the colour scale is comparable across
+    datasets. If no k-mers were counted, an all-zero grid is drawn cleanly
+    rather than crashing on a divide-by-zero.
+
+    Returns ``None`` when ``k`` exceeds ``max_k`` (a ``2^k x 2^k`` image grows
+    too large to be useful), otherwise a base64 PNG data URI.
     """
     if result.k > max_k:
         return None
     matrix = _fcgr_matrix(result.counts, result.k)
+    total = sum(result.counts.values())
+    if total > 0:
+        matrix = [[cell / total for cell in row] for row in matrix]
     fig, ax = plt.subplots(figsize=(5.5, 5))
-    im = ax.imshow(matrix, cmap="cividis", interpolation="nearest")
-    ax.set_title(f"FCGR heatmap (k={result.k})", loc="left", fontsize=11, fontweight="bold", color=_INK)
+    im = ax.imshow(matrix, cmap="cividis", interpolation="nearest", vmin=0)
+    ax.set_title(
+        f"FCGR normalized frequency heatmap (k={result.k})",
+        loc="left", fontsize=11, fontweight="bold", color=_INK,
+    )
     fig.patch.set_alpha(0)
     ax.set_xticks([])
     ax.set_yticks([])
@@ -148,7 +176,7 @@ def fcgr_heatmap(result: KmerResult, max_k: int = 8) -> str | None:
     ax.text(1.02, 1.02, "T", transform=ax.transAxes, ha="left", va="bottom", fontsize=10)
     ax.text(-0.02, -0.02, "C", transform=ax.transAxes, ha="right", va="top", fontsize=10)
     ax.text(1.02, -0.02, "G", transform=ax.transAxes, ha="left", va="top", fontsize=10)
-    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label="frequency")
+    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label="normalized frequency")
     return _fig_to_data_uri(fig)
 
 

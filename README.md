@@ -2,77 +2,52 @@
 
 **Local k-mer analysis dashboard for FASTA/FASTQ files.**
 
-KmerLab is a small, self-contained web app for exploring the k-mer composition
-of DNA sequence files. Upload (or select) a FASTA/FASTQ file, choose a value of
-*k*, and get counts, summary statistics, visualizations, comparisons, and
-exports — all computed **locally on your own machine**.
+KmerLab is a local-first, educational and validation-focused bioinformatics
+utility for small-to-medium FASTA/FASTQ datasets. Upload (or select) a sequence
+file, choose a length *k*, and get k-mer counts, base composition, a true k-mer
+spectrum, a normalized FCGR heatmap, and two-file similarity — computed entirely
+on your own machine.
 
-> **No cloud. No database. No login. No API keys. No internet required.**
-> Your sequence data never leaves your computer. Uploaded files are processed in
-> memory and are never written to disk.
+> **Runs 100% locally.** No cloud, no database, no login, no API keys, no
+> internet requirement after installation, no paid services. Uploaded files are
+> processed in memory and are never written to disk.
 
----
-
-## The problem it solves
-
-k-mer counting is a foundational step in genomics — used for genome assembly,
-error and contamination detection, taxonomic classification, and comparing
-datasets. Serious tools like [KMC](https://github.com/refresh-bio/KMC) and
-[Jellyfish](https://github.com/gmarcais/Jellyfish) are fast but command-line
-only and can be intimidating for students. Web tools usually mean uploading your
-data to someone else's server.
-
-KmerLab fills the gap: a friendly, visual, **completely local** utility that a
-biology or bioinformatics student can run in a minute and actually use for
-real (small-to-medium) files — without giving up privacy or fighting a CLI.
+**Status — read this honestly:** KmerLab is *validated* against hand-computed
+benchmark fixtures and covered by an automated test suite, and it uses correct,
+standard definitions for every metric it reports. It is **not** a research-grade
+counter for large genomes: it does exact in-memory counting (no streaming, no
+disk-backed hashing, no probabilistic sketches) and is intended for teaching,
+exploration, and validating small datasets — not for whole-genome-scale runs.
+See [Limitations](#limitations) and
+[Is it research-grade?](#is-it-research-grade).
 
 ---
 
-## Features
+## What it does
 
-- **Input**: FASTA and FASTQ, with automatic format detection.
-- **Extensions**: `.fa`, `.fasta`, `.fq`, `.fastq`, plus gzip-compressed `.gz`.
-- **k-mer counting** with a sliding window and `collections.Counter`.
-- **Canonical k-mers** — merge each k-mer with its reverse complement.
-- **Ambiguous bases** — include or exclude k-mers containing `N` (or other
-  non-ACGT characters); invalid bases are reported cleanly, never silently.
-- **Summary stats**: total sequences, total bases, valid k-mers, unique k-mers,
-  GC content, skipped k-mers, invalid bases, sequence-length stats.
-- **Base composition** bar (A/C/G/T/other) using the sequencing-chromatogram
-  nucleotide colour system that runs through the whole UI.
-- **Visualizations**: top-k-mer bar chart, k-mer frequency spectrum histogram,
-  and an optional **FCGR** (Frequency Chaos Game Representation) heatmap.
-- **Compare two files**: shared k-mers, unique-to-A, unique-to-B, **Jaccard**
-  similarity, and **cosine** similarity, with a side-by-side bar chart.
-- **Exports**: k-mer counts to **CSV**, analysis summary to **JSON**, and
-  comparison results to JSON or CSV.
-- **Clean error handling**: invalid files, invalid *k*, empty sequences,
-  malformed FASTQ, unsupported formats, and oversized uploads all produce clear
-  messages instead of stack traces.
-- **Bundled sample files** for instant demoing.
+- Parses **FASTA** and **FASTQ** (auto-detected), plain or **gzip** (`.gz`).
+- Counts k-mers with a sliding window (exact `collections.Counter`).
+- **Canonical reverse-complement mode** with full **IUPAC** ambiguity support.
+- Include or exclude k-mers containing ambiguous/invalid bases.
+- Reports: sequences, bases, **counted k-mers**, **unique k-mers**, **skipped
+  windows**, **ambiguous/invalid base count**, GC content (over A/C/G/T), base
+  composition, and sequence-length stats.
+- **True k-mer spectrum** (distinct k-mers per exact multiplicity — no binning).
+- **FCGR normalized frequency heatmap** for k ≤ 8.
+- Optional **FASTQ quality summary** (Phred+33): reads, avg length, avg/min/max
+  quality, per-read average quality.
+- **Compare two files**: shared / unique k-mers, **Jaccard** and **cosine**
+  similarity, side-by-side chart.
+- **Exports**: k-mer counts → CSV, summary → JSON, comparison → JSON/CSV.
 
----
+## What it does *not* do
 
-## Tech stack
-
-- **Python 3.9+**
-- **Flask** — web framework
-- **pandas** — CSV/table export
-- **matplotlib** — charts (headless `Agg` backend)
-- **HTML / CSS / vanilla JavaScript** — no React, no Tailwind, no Bootstrap
-- **pytest** — tests
-
-No database, no ORM, no external APIs, no build step.
-
----
-
-## Screenshots
-
-_Add screenshots here once you run it locally:_
-
-- `docs/analyzer.png` — the Analyzer page with summary cards and charts
-- `docs/compare.png` — the Compare page with similarity scores
-- `docs/fcgr.png` — an FCGR heatmap
+- No large-file / streaming mode — everything is held in memory.
+- No probabilistic sketching (MinHash, HyperLogLog) or disk-backed counting.
+- No protein / amino-acid k-mers (nucleotide only).
+- No alignment, assembly, taxonomic classification, or variant calling.
+- No network access, database, accounts, or telemetry of any kind.
+- FASTQ quality assumes **Phred+33**; legacy Phred+64 is not auto-detected.
 
 ---
 
@@ -85,43 +60,43 @@ cd KmerLab
 python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 
-pip install -r requirements.txt
+pip install -r requirements.txt          # flexible versions
+# or, for an exact reproducible environment:
+pip install -r requirements-lock.txt
 ```
 
-## How to run locally
+## Run
 
 ```bash
 python app.py
 ```
 
-Then open **http://127.0.0.1:5000** in your browser. The app binds to
-`127.0.0.1` (localhost) only.
+Open **http://127.0.0.1:5000** (binds to localhost only).
 
-## How to run the tests
+## Test
 
 ```bash
 pytest
 ```
 
-(48 tests covering parsing, counting, canonical k-mers, reverse complement,
-invalid-base handling, similarity metrics, exports, the compare workflow, and
-the Flask API.)
+The suite covers parsing, strict FASTQ error cases, k-mer counting, IUPAC
+reverse complement, canonical + ambiguous modes, similarity metrics, the k-mer
+spectrum, FCGR normalization (including the zero-count case), the gzip
+decompression limit, the FASTQ quality summary, CSV/JSON exports, the Flask API,
+and exact-match **benchmark validation** (`benchmarks/`).
 
 ---
 
-## Example usage
+## Example workflow
 
 1. Open the **Analyzer** page.
-2. Click **load a sample → `example.fasta`** (or upload your own file).
-3. Set **k = 4**, optionally tick **Canonical k-mers**.
-4. Click **Analyze**.
-5. Inspect the summary cards, top-k-mer bar chart, frequency spectrum, FCGR
-   heatmap, and the frequency table.
-6. Click **Export k-mer counts (CSV)** or **Export summary (JSON)**.
-
-To compare two datasets, open the **Compare** page, load `compare_a.fasta` and
-`compare_b.fasta`, choose *k*, and click **Compare** to see Jaccard/cosine
-similarity and shared/unique k-mer counts.
+2. Load the sample `example.fasta` (or upload your own file).
+3. Set **k = 4**, optionally enable **Canonical reverse-complement mode**.
+4. Click **Analyze** and inspect the cards, base composition, spectrum, FCGR
+   heatmap, and frequency table.
+5. Export counts (CSV) or the summary (JSON).
+6. Use the **Compare** page with `compare_a.fasta` / `compare_b.fasta` for
+   Jaccard/cosine similarity.
 
 The core library also works standalone:
 
@@ -139,16 +114,41 @@ print(summarize(result, parsed.records))
 
 ## Method
 
-- **k-mer**: a length-*k* substring extracted with a one-base sliding window.
-- **Reverse complement**: A↔T, C↔G, reversed.
-- **Canonical k-mer**: the lexicographically smaller of a k-mer and its reverse
-  complement — merges the two DNA strand orientations.
-- **GC content**: fraction of G/C among A/C/G/T bases only.
-- **Jaccard similarity**: `|A ∩ B| / |A ∪ B|` over the *sets* of k-mers.
-- **Cosine similarity**: `(A · B) / (‖A‖ · ‖B‖)` over k-mer *frequency vectors*.
-- **FCGR**: k-mer frequencies mapped onto a 2ᵏ × 2ᵏ grid (corners A/C/G/T).
+**k-mer.** A length-*k* substring extracted with a one-base sliding window.
+Counting k-mers gives an alignment-free fingerprint of a dataset.
 
-See the in-app **About / Method** page for fuller explanations.
+**Canonical k-mers.** DNA is double-stranded, so a k-mer and its reverse
+complement usually describe the same physical sequence. The reverse complement
+swaps A↔T and C↔G and reverses the string; the **canonical** form is the
+lexicographically smaller of the two. Canonical mode merges both orientations.
+
+**IUPAC ambiguous bases.** Sequence files contain more than A/C/G/T. IUPAC codes
+encode uncertainty (`N`=any, `R`=A/G, `Y`=C/T, …). KmerLab knows the full
+alphabet `ACGTRYSWKMBDHVN` and complements ambiguity codes correctly (`R↔Y`,
+`K↔M`, `B↔V`, `D↔H`; `S`, `W`, `N` self-complementary). By default, any k-mer
+window containing a non-ACGT base is **skipped** (counted as a *skipped
+window*); enable *Include ambiguous IUPAC bases* to count them.
+
+**Strict FASTQ parser.** KmerLab uses a strict 4-line FASTQ parser: every record
+must be `@header` / sequence / `+` separator / quality, and the sequence and
+quality lengths must match. Malformed records raise a clear error naming the
+offending record (incomplete record, missing `@`, missing `+`, or length
+mismatch) instead of being silently skipped.
+
+**k-mer spectrum.** Plots the number of *distinct* k-mers at each exact
+occurrence count (x = multiplicity, y = number of distinct k-mers). KmerLab uses
+exact integer multiplicities — **not histogram bins** — so counts are never
+merged.
+
+**FCGR normalized frequency heatmap.** Maps k-mer frequencies onto a
+2ᵏ × 2ᵏ grid (corners A/C/G/T). Each cell is **normalized** to a relative
+frequency (raw count ÷ total counted k-mers) so scales are comparable across
+datasets; the zero-count case is handled without dividing by zero. Rendered for
+**k ≤ 8** because the image is a 2ᵏ × 2ᵏ grid.
+
+**Jaccard similarity.** `|A ∩ B| / |A ∪ B|` over the *sets* of k-mers.
+
+**Cosine similarity.** `(A · B) / (‖A‖ · ‖B‖)` over k-mer *frequency vectors*.
 
 ---
 
@@ -157,53 +157,66 @@ See the in-app **About / Method** page for fuller explanations.
 ```
 KmerLab/
 ├── app.py                    # Flask app: routes + API endpoints
-├── requirements.txt
+├── requirements.txt          # flexible dependencies
+├── requirements-lock.txt     # exact pinned dependencies
 ├── pytest.ini
+├── LICENSE                   # MIT
 ├── README.md
-├── kmerlab/                  # core library (importable, no Flask dependency)
+├── kmerlab/                  # core library (importable, Flask-independent)
 │   ├── __init__.py
-│   ├── sequence_parser.py    # FASTA/FASTQ parsing, format detection, gzip
-│   ├── kmer_counter.py       # counting, reverse complement, canonical, validate_k
-│   ├── metrics.py            # GC, summaries, Jaccard, cosine, comparison
+│   ├── sequence_parser.py    # FASTA/FASTQ parsing, format detection, safe gzip
+│   ├── kmer_counter.py       # counting, IUPAC reverse complement, canonical
+│   ├── metrics.py            # GC, composition, quality, Jaccard, cosine
 │   ├── visualizations.py     # matplotlib charts -> base64 PNG data URIs
 │   └── exports.py            # CSV / JSON export helpers (pandas)
 ├── templates/                # Jinja2 HTML (base, index, compare, about)
 ├── static/                   # style.css, main.js (vanilla JS)
-├── samples/                  # example.fasta/.fastq, invalid.fastq, compare_a/b.fasta
-└── tests/                    # pytest suite
+├── samples/                  # example / invalid / compare sample files
+├── benchmarks/               # tiny deterministic files + expected counts
+├── tests/                    # pytest suite
+└── .github/workflows/        # CI: pytest on Python 3.10 / 3.11 / 3.12
 ```
 
 ---
 
 ## Limitations
 
-- Files are processed **in memory**; very large genomes may exceed available
-  RAM. The web UI caps uploads at **50 MB**.
-- **Exact** counting is used (no probabilistic sketching), so memory scales with
-  the number of distinct k-mers and with *k*. The UI caps *k* at 31.
-- **Nucleotide sequences only** — no protein k-mer support yet.
-- The FCGR heatmap renders only for **k ≤ 8** (a 2ᵏ × 2ᵏ image).
+- **In-memory, exact counting.** Memory scales with the number of distinct
+  k-mers and with *k*. Not suitable for whole genomes or deep sequencing runs.
+- Web UI caps uploads at **50 MB compressed** and **100 MB decompressed**
+  (gzip-bomb protection); larger inputs are rejected cleanly.
+- *k* is capped at **31**; the FCGR heatmap at **k ≤ 8**.
+- Nucleotide sequences only (no protein k-mers).
+- FASTQ quality assumes **Phred+33**.
 - Similarity metrics are only meaningful when both files use the same *k* and
-  canonical setting (the app enforces this).
-- `debug=True` is on for local development convenience — turn it off if you ever
-  expose the app beyond localhost.
-
----
+  canonical setting (enforced by the app).
+- `debug=True` is enabled for local development; disable it if you ever expose
+  the app beyond localhost.
 
 ## Future improvements
 
-- Larger-file **streaming** counting mode (bounded memory).
-- Broader compressed-file support (bzip2, zstd).
-- **Protein** sequence / k-mer support.
-- More sequence **QC** metrics (per-position quality, length distributions).
-- **MinHash** sketching for fast approximate comparison of large datasets.
-- A standalone **command-line interface**.
-- **Docker** support.
-- **PDF** report export.
+- Streaming / bounded-memory counting mode.
+- Broader compression support (bzip2, zstd).
+- Protein / amino-acid k-mers.
+- More FASTQ QC (per-position quality, adapter scan).
+- MinHash sketching for fast approximate comparison.
+- A standalone CLI and Docker image.
+- PDF report export.
 
----
+## Is it research-grade?
+
+**Partially, and only for what it claims.** The metric definitions are correct
+and standard, the results are deterministic and validated against hand-computed
+benchmarks, the code is tested across Python 3.10–3.12 in CI, and the tool is
+honest about what it computes. That makes it a solid **validated educational and
+validation-focused** utility.
+
+It is **not** research-grade as a high-performance counter: it does not stream,
+shard, or sketch, so it cannot handle genome-scale data, and it has not been
+benchmarked for speed or memory against tools like KMC or Jellyfish. Calling it
+a "fully research-grade k-mer counter" would be inaccurate, and this README
+deliberately does not.
 
 ## License
 
-Open source — released for educational and research use. Add your preferred
-license (e.g. MIT) here.
+[MIT License](LICENSE).

@@ -7,7 +7,7 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Iterable
 
-from .kmer_counter import KmerResult, VALID_BASES
+from .kmer_counter import KmerResult
 from .sequence_parser import SeqRecord
 
 
@@ -59,6 +59,46 @@ def sequence_length_stats(records: list[SeqRecord]) -> dict:
     }
 
 
+def quality_summary(records: Iterable[SeqRecord], phred_offset: int = 33) -> dict | None:
+    """Summarize FASTQ Phred quality scores, or ``None`` for FASTA input.
+
+    Assumes Phred+33 encoding (Sanger / Illumina 1.8+). Returns read count,
+    average read length, and average/min/max quality across all bases, plus the
+    per-read average quality distribution. Records without a quality string
+    (i.e. FASTA) are ignored; if none have quality, ``None`` is returned.
+    """
+    quals = [r.quality for r in records if r.quality is not None]
+    if not quals:
+        return None
+    read_count = len(quals)
+    total_len = sum(len(q) for q in quals)
+    total_score = 0
+    total_bases = 0
+    min_q: int | None = None
+    max_q: int | None = None
+    per_read_avg: list[float] = []
+    for q in quals:
+        if not q:
+            per_read_avg.append(0.0)
+            continue
+        scores = [ord(c) - phred_offset for c in q]
+        s = sum(scores)
+        total_score += s
+        total_bases += len(scores)
+        lo, hi = min(scores), max(scores)
+        min_q = lo if min_q is None else min(min_q, lo)
+        max_q = hi if max_q is None else max(max_q, hi)
+        per_read_avg.append(round(s / len(scores), 3))
+    return {
+        "reads": read_count,
+        "avg_read_length": round(total_len / read_count, 3),
+        "avg_quality": round(total_score / total_bases, 3) if total_bases else 0.0,
+        "min_quality": min_q if min_q is not None else 0,
+        "max_quality": max_q if max_q is not None else 0,
+        "per_read_avg_quality": per_read_avg,
+    }
+
+
 def summarize(result: KmerResult, records: list[SeqRecord], top_n: int = 20) -> dict:
     """Build a JSON-serializable summary dict for a single analysis."""
     return {
@@ -67,13 +107,14 @@ def summarize(result: KmerResult, records: list[SeqRecord], top_n: int = 20) -> 
         "include_ambiguous": result.include_ambiguous,
         "total_sequences": result.n_sequences,
         "total_bases": result.n_bases,
-        "total_kmers": result.total_kmers,
+        "counted_kmers": result.counted_kmers,
         "unique_kmers": result.unique_kmers,
         "skipped_kmers": result.skipped_kmers,
-        "invalid_bases": result.invalid_bases,
+        "invalid_base_count": result.invalid_base_count,
         "gc_content": round(gc_content(records), 6),
         "base_composition": base_composition(records),
         "length_stats": sequence_length_stats(records),
+        "quality": quality_summary(records),
         "top_kmers": [
             {"kmer": km, "count": c} for km, c in result.top(top_n)
         ],

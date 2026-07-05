@@ -3,9 +3,11 @@
 Implements a straightforward sliding-window counter (inspired by lh3/kmer-cnt
 and Jellyfish's count model) with support for:
 
-- canonical k-mers (a k-mer and its reverse complement counted together);
-- optional inclusion/exclusion of k-mers containing ambiguous bases (e.g. ``N``);
-- clean tracking of skipped/invalid k-mers.
+- canonical k-mers (a k-mer and its reverse complement counted together),
+  with full IUPAC ambiguity-code support in the reverse complement;
+- optional inclusion/exclusion of k-mers containing ambiguous/invalid bases
+  (e.g. ``N`` and the other IUPAC codes);
+- clean tracking of skipped windows and ambiguous/invalid base characters.
 """
 
 from __future__ import annotations
@@ -16,19 +18,31 @@ from typing import Iterable
 
 from .sequence_parser import SeqRecord
 
-# The four canonical DNA bases. Everything else is "ambiguous"/invalid.
+# The four unambiguous DNA bases. Everything else is ambiguous/invalid.
 VALID_BASES = frozenset("ACGT")
 
-_COMPLEMENT = str.maketrans("ACGTacgt", "TGCAtgca")
+# The full IUPAC nucleotide alphabet (unambiguous + ambiguity codes).
+IUPAC_BASES = frozenset("ACGTRYSWKMBDHVN")
+
+# IUPAC-aware complement, upper- and lower-case. Reverse complement of an
+# ambiguity code is the complement of the set of bases it represents:
+#   R (A/G) <-> Y (C/T), S (C/G) <-> S, W (A/T) <-> W, K (G/T) <-> M (A/C),
+#   B (C/G/T) <-> V (A/C/G), D (A/G/T) <-> H (A/C/T), N <-> N.
+IUPAC_COMPLEMENT = str.maketrans(
+    "ACGTRYSWKMBDHVNacgtryswkmbdhvn",
+    "TGCAYRSWMKVHDBNtgcayrswmkvhdbn",
+)
 
 
-def reverse_complement(kmer: str) -> str:
-    """Return the reverse complement of a DNA string.
+def reverse_complement(seq: str) -> str:
+    """Return the IUPAC-aware reverse complement of a nucleotide string.
 
-    ``A<->T``, ``C<->G``. The input is upper/lower-case tolerant but the output
-    preserves the case of each translated base.
+    Unambiguous bases follow ``A<->T`` / ``C<->G``; ambiguity codes are mapped
+    to the complement of the base set they represent (e.g. ``R<->Y``,
+    ``K<->M``, ``B<->V``, ``D<->H``, ``S/W/N`` self-complementary). Characters
+    outside the IUPAC alphabet are passed through unchanged. Case is preserved.
     """
-    return kmer.translate(_COMPLEMENT)[::-1]
+    return seq.translate(IUPAC_COMPLEMENT)[::-1]
 
 
 def canonical(kmer: str) -> str:
@@ -48,9 +62,9 @@ class KmerResult:
     include_ambiguous: bool = False
     n_sequences: int = 0
     n_bases: int = 0
-    total_kmers: int = 0        # number of valid k-mer occurrences counted
-    skipped_kmers: int = 0      # windows skipped due to invalid/ambiguous bases
-    invalid_bases: int = 0      # count of individual non-ACGT characters seen
+    counted_kmers: int = 0       # number of k-mer occurrences actually counted
+    skipped_kmers: int = 0       # sliding windows skipped (ambiguous/invalid base)
+    invalid_base_count: int = 0  # individual non-ACGT characters seen in input
 
     @property
     def unique_kmers(self) -> int:
@@ -88,18 +102,23 @@ def count_kmers_in_sequence(
     canonical_mode: bool = False,
     include_ambiguous: bool = False,
 ) -> tuple[int, int, int]:
-    """Count k-mers in a single uppercase-normalized sequence.
+    """Count k-mers in a single sequence (case-normalized to upper).
 
-    Returns ``(counted, skipped, invalid_bases)`` where ``counted`` is the
+    Returns ``(counted, skipped, invalid_base_count)`` where ``counted`` is the
     number of k-mer occurrences added to ``counts``, ``skipped`` is the number
-    of windows dropped for containing invalid bases, and ``invalid_bases`` is
-    the number of individual non-ACGT characters in the sequence.
+    of sliding windows dropped for containing a non-ACGT base (only when
+    ``include_ambiguous`` is False), and ``invalid_base_count`` is the number of
+    individual non-ACGT characters in the sequence.
+
+    When ``include_ambiguous`` is False, any k-mer containing a non-ACGT
+    character is skipped. When True, every window is counted and the canonical
+    form (if requested) is computed with IUPAC-aware reverse complement.
     """
     seq = seq.upper()
     n = len(seq)
-    invalid_bases = sum(1 for b in seq if b not in VALID_BASES)
+    invalid_base_count = sum(1 for b in seq if b not in VALID_BASES)
     if n < k:
-        return 0, 0, invalid_bases
+        return 0, 0, invalid_base_count
 
     counted = 0
     skipped = 0
@@ -112,7 +131,7 @@ def count_kmers_in_sequence(
             kmer = canonical(kmer)
         counts[kmer] += 1
         counted += 1
-    return counted, skipped, invalid_bases
+    return counted, skipped, invalid_base_count
 
 
 def count_kmers(
@@ -132,7 +151,7 @@ def count_kmers(
         counted, skipped, invalid = count_kmers_in_sequence(
             rec.sequence, k, result.counts, canonical_mode, include_ambiguous
         )
-        result.total_kmers += counted
+        result.counted_kmers += counted
         result.skipped_kmers += skipped
-        result.invalid_bases += invalid
+        result.invalid_base_count += invalid
     return result

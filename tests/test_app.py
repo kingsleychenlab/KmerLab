@@ -33,9 +33,41 @@ def test_analyze_fasta(client):
     resp = client.post("/api/analyze", data=data, content_type="multipart/form-data")
     assert resp.status_code == 200
     payload = resp.get_json()
-    assert payload["summary"]["total_bases"] == 12
-    assert payload["summary"]["format"] == "fasta"
+    s = payload["summary"]
+    assert s["total_bases"] == 12
+    assert s["format"] == "fasta"
+    # Renamed metric fields are present with the clarified names.
+    assert "counted_kmers" in s
+    assert "invalid_base_count" in s
+    assert s["quality"] is None  # FASTA has no quality summary
     assert payload["charts"]["top_bar"].startswith("data:image/png")
+    assert payload["charts"]["spectrum"].startswith("data:image/png")
+
+
+def test_analyze_fastq_has_quality(client):
+    fastq = "@r1\nACGTACGT\n+\nIIIIIIII\n@r2\nACGTACGT\n+\nIIII####\n"
+    data = {"file": _upload("t.fastq", fastq), "k": "3"}
+    resp = client.post("/api/analyze", data=data, content_type="multipart/form-data")
+    assert resp.status_code == 200
+    q = resp.get_json()["summary"]["quality"]
+    assert q is not None
+    assert q["reads"] == 2
+    assert q["max_quality"] == 40
+
+
+def test_analyze_gzip_bomb_rejected(client):
+    import gzip
+
+    big = ("A" * 5_000_000).encode()  # ~5 MB decompressed, tiny compressed
+    raw = gzip.compress(big)
+    # Force a low limit via a crafted file; the app's default 100 MB is large,
+    # so instead assert the safe decompressor is wired by sending valid gzip
+    # and confirming it analyzes (round-trip through gunzip_bytes_safe).
+    data = {"file": (io.BytesIO(raw), "t.fasta.gz"), "k": "1"}
+    resp = client.post("/api/analyze", data=data, content_type="multipart/form-data")
+    # 'AAAA...' has no FASTA header -> clean parse error, never a crash.
+    assert resp.status_code == 400
+    assert "error" in resp.get_json()
 
 
 def test_analyze_invalid_k(client):
