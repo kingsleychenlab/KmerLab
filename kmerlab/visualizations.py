@@ -96,15 +96,20 @@ def kmer_spectrum(result: KmerResult) -> str:
         ax.text(0.5, 0.5, "No k-mers to display", ha="center", va="center")
         ax.axis("off")
         return _fig_to_data_uri(fig)
-    ax.bar(xs, ys, width=0.9, color=_ACCENT, edgecolor="white", linewidth=0.4)
+    # When the multiplicity range is wide, bars become too thin to see, so fall
+    # back to a stem/line plot. (Bars on a log x-axis would render with
+    # distorted widths, so we never combine bars with a log x-axis.)
+    if max(xs) > 60:
+        ax.plot(xs, ys, marker="o", markersize=3, linewidth=1, color=_ACCENT)
+        ax.set_xscale("log")
+    else:
+        ax.bar(xs, ys, width=0.9, color=_ACCENT, edgecolor="white", linewidth=0.4)
     ax.set_xlabel("k-mer multiplicity")
     ax.set_ylabel("Number of distinct k-mers")
     ax.set_title(f"K-mer Spectrum (k={result.k})", loc="left", fontsize=11, fontweight="bold")
     _style(ax)
     if max(ys) > 10:
         ax.set_yscale("log")
-    if max(xs) > 30:
-        ax.set_xscale("log")
     fig.patch.set_alpha(0)
     return _fig_to_data_uri(fig)
 
@@ -112,13 +117,16 @@ def kmer_spectrum(result: KmerResult) -> str:
 def _fcgr_matrix(counts: Counter, k: int) -> list[list[float]]:
     """Build a 2^k x 2^k Frequency Chaos Game Representation matrix.
 
-    Corners are assigned A=(0,0), C=(0,1), G=(1,1), T=(1,0). Each k-mer maps to
-    a unique cell by iteratively subdividing the square, following the classic
-    CGR construction.
+    Corners (as drawn by :func:`fcgr_heatmap`, where row 0 is the top): A =
+    top-left, C = bottom-left, G = bottom-right, T = top-right. Each corner is
+    ``(cx, cy)`` with ``cx`` the horizontal half (0 = left, 1 = right) and
+    ``cy`` the vertical half (0 = bottom, 1 = top). Each k-mer maps to a unique
+    cell by iteratively subdividing the square (the classic CGR construction),
+    so the corner map here stays consistent with the corner labels in the plot.
     """
     size = 2 ** k
     matrix = [[0.0] * size for _ in range(size)]
-    corner = {"A": (0, 0), "C": (0, 1), "G": (1, 1), "T": (1, 0)}
+    corner = {"A": (0, 1), "C": (0, 0), "G": (1, 0), "T": (1, 1)}
     for kmer, value in counts.items():
         x0, y0, x1, y1 = 0.0, 0.0, 1.0, 1.0
         valid = True

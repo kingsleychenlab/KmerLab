@@ -37,11 +37,33 @@ def test_spectrum_renders_data_uri():
 
 
 def test_fcgr_matrix_raw_counts():
-    # k=1: A appears 3 times. Corner A=(0,0) -> row size-1, col 0.
+    # k=1: A appears 3 times.
     result = count_kmers([SeqRecord(id="r", sequence="AAA")], 1)
     matrix = _fcgr_matrix(result.counts, 1)
     total = sum(cell for row in matrix for cell in row)
     assert total == 3  # raw counts preserved internally
+
+
+def test_fcgr_corner_placement_matches_labels():
+    """Each single base must land in the corner its plot label claims.
+
+    Layout (imshow row 0 = top): A top-left, C bottom-left, G bottom-right,
+    T top-right. A mismatch here means the heatmap corner labels would lie.
+    """
+    from collections import Counter
+
+    def cell_of(base):
+        m = _fcgr_matrix(Counter({base: 1}), 1)
+        for r in range(2):
+            for c in range(2):
+                if m[r][c] == 1:
+                    return (r, c)
+        raise AssertionError("base not placed")
+
+    assert cell_of("A") == (0, 0)  # top-left
+    assert cell_of("C") == (1, 0)  # bottom-left
+    assert cell_of("G") == (1, 1)  # bottom-right
+    assert cell_of("T") == (0, 1)  # top-right
 
 
 def test_fcgr_normalized_render():
