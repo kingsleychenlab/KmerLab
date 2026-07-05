@@ -18,9 +18,26 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 from .kmer_counter import KmerResult, reverse_complement  # noqa: E402
 
-# A calm, scientific-looking single accent colour.
-_ACCENT = "#2b6777"
-_ACCENT_B = "#c0392b"
+# Palette harmonized with the app's nucleotide colour system.
+_ACCENT = "#2f73e0"   # base-C blue: primary single-series colour
+_ACCENT_B = "#e0483c"  # base-T red: second series in comparisons
+_INK = "#0d1b24"
+_GRID = "#dce6eb"
+
+
+def _style(ax):
+    """Apply a clean, instrument-like axis style shared by all figures."""
+    ax.set_facecolor("white")
+    for spine in ("top", "right"):
+        ax.spines[spine].set_visible(False)
+    for spine in ("left", "bottom"):
+        ax.spines[spine].set_color(_GRID)
+    ax.tick_params(colors=_INK, labelsize=8, length=0)
+    ax.title.set_color(_INK)
+    ax.xaxis.label.set_color(_INK)
+    ax.yaxis.label.set_color(_INK)
+    ax.grid(axis="both", color=_GRID, linewidth=0.6, alpha=0.7)
+    ax.set_axisbelow(True)
 
 
 def _fig_to_data_uri(fig) -> str:
@@ -42,11 +59,12 @@ def top_kmers_bar(result: KmerResult, n: int = 20) -> str:
         return _fig_to_data_uri(fig)
     labels = [km for km, _ in top][::-1]
     values = [c for _, c in top][::-1]
-    ax.barh(labels, values, color=_ACCENT)
+    ax.barh(labels, values, color=_ACCENT, height=0.72)
     ax.set_xlabel("Count")
-    ax.set_ylabel("k-mer")
-    ax.set_title(f"Top {len(top)} {result.k}-mers")
+    ax.set_title(f"Top {len(top)} {result.k}-mers", loc="left", fontsize=11, fontweight="bold")
+    _style(ax)
     ax.tick_params(axis="y", labelsize=8)
+    fig.patch.set_alpha(0)
     return _fig_to_data_uri(fig)
 
 
@@ -63,12 +81,14 @@ def frequency_histogram(result: KmerResult, bins: int = 40) -> str:
         ax.text(0.5, 0.5, "No k-mers to display", ha="center", va="center")
         ax.axis("off")
         return _fig_to_data_uri(fig)
-    ax.hist(counts, bins=min(bins, max(1, max(counts))), color=_ACCENT, edgecolor="white")
+    ax.hist(counts, bins=min(bins, max(1, max(counts))), color=_ACCENT, edgecolor="white", linewidth=0.6)
     ax.set_xlabel("k-mer occurrence count")
     ax.set_ylabel("Number of distinct k-mers")
-    ax.set_title(f"{result.k}-mer frequency spectrum")
+    ax.set_title(f"{result.k}-mer frequency spectrum", loc="left", fontsize=11, fontweight="bold")
+    _style(ax)
     if max(counts) > 1:
         ax.set_yscale("log")
+    fig.patch.set_alpha(0)
     return _fig_to_data_uri(fig)
 
 
@@ -118,8 +138,9 @@ def fcgr_heatmap(result: KmerResult, max_k: int = 8) -> str | None:
         return None
     matrix = _fcgr_matrix(result.counts, result.k)
     fig, ax = plt.subplots(figsize=(5.5, 5))
-    im = ax.imshow(matrix, cmap="viridis", interpolation="nearest")
-    ax.set_title(f"FCGR heatmap (k={result.k})")
+    im = ax.imshow(matrix, cmap="cividis", interpolation="nearest")
+    ax.set_title(f"FCGR heatmap (k={result.k})", loc="left", fontsize=11, fontweight="bold", color=_INK)
+    fig.patch.set_alpha(0)
     ax.set_xticks([])
     ax.set_yticks([])
     # Label the four corners with their nucleotide.
@@ -148,6 +169,8 @@ def comparison_bar(a: KmerResult, b: KmerResult, n: int = 15) -> str:
     ax.set_xticks(list(x))
     ax.set_xticklabels(top_kmers, rotation=60, ha="right", fontsize=8)
     ax.set_ylabel("Count")
-    ax.set_title(f"Top {len(top_kmers)} {a.k}-mers: File A vs File B")
-    ax.legend()
+    ax.set_title(f"Top {len(top_kmers)} {a.k}-mers: File A vs File B", loc="left", fontsize=11, fontweight="bold")
+    _style(ax)
+    ax.legend(frameon=False, fontsize=9)
+    fig.patch.set_alpha(0)
     return _fig_to_data_uri(fig)

@@ -3,69 +3,98 @@
 {% block nav_home %}active{% endblock %}
 
 {% block content %}
-<section class="intro">
-  <h1>KmerLab</h1>
+<section class="hero">
+  <span class="eyebrow">Local k-mer analysis</span>
+  <h1>Read your sequences by their <span class="accent">k-mers</span>.</h1>
   <p class="lead">
-    A local k-mer frequency analyzer for FASTA and FASTQ files. Upload a
-    sequence file, choose a value of <em>k</em>, and get counts, summary
-    statistics, and visualizations — all computed on your own machine.
+    Upload a FASTA or FASTQ file, pick a length <em>k</em>, and get counts,
+    composition, spectra, and comparisons — computed entirely on your own
+    machine. No uploads to anyone's server.
   </p>
+
+  <div class="ribbon" aria-hidden="true">
+    <div class="ribbon-track" id="ribbon"></div>
+  </div>
 </section>
 
 <section class="panel">
-  <h2>Analyze a file</h2>
+  <div class="panel-head">
+    <h2>Analyze a file</h2>
+    <span class="hint">FASTA / FASTQ · plain or .gz · up to 50&nbsp;MB</span>
+  </div>
+
   <form id="analyze-form">
     <div class="field">
-      <label for="file">Sequence file (.fa, .fasta, .fq, .fastq, optionally .gz)</label>
-      <input type="file" id="file" name="file" accept=".fa,.fasta,.fq,.fastq,.gz,.txt">
+      <label for="file">Sequence file</label>
+      <label class="dropzone" id="dropzone" for="file">
+        <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round"/>
+        </svg>
+        <span class="dz-title"><b>Choose a file</b> or drag it here</span>
+        <span class="dz-sub">.fa · .fasta · .fq · .fastq · .gz</span>
+        <input type="file" id="file" name="file" accept=".fa,.fasta,.fq,.fastq,.gz,.txt">
+      </label>
       <div class="sample-loader">
-        <span>or load a sample:</span>
+        <span>No file handy? Load a sample:</span>
         <select id="sample-select"><option value="">— choose a sample —</option></select>
       </div>
     </div>
 
     <div class="controls">
-      <div class="field small">
-        <label for="k">k (k-mer length)</label>
+      <div class="field">
+        <label for="k">k (length)</label>
         <input type="number" id="k" name="k" value="4" min="1" max="31">
       </div>
-      <div class="field small">
-        <label for="top_n">Top N k-mers</label>
+      <div class="field">
+        <label for="top_n">Top N</label>
         <input type="number" id="top_n" name="top_n" value="20" min="1" max="200">
       </div>
-      <div class="field checks">
-        <label class="check">
-          <input type="checkbox" id="canonical" name="canonical">
-          Canonical k-mers (merge reverse complements)
-        </label>
-        <label class="check">
-          <input type="checkbox" id="include_ambiguous" name="include_ambiguous">
-          Include ambiguous bases (N, etc.)
-        </label>
-        <label class="check">
-          <input type="checkbox" id="fcgr" name="fcgr" checked>
-          Render FCGR heatmap (k ≤ 8)
-        </label>
+      <div class="field" style="grid-column: span 2; min-width: 260px;">
+        <label>Options</label>
+        <div class="toggles">
+          <label class="toggle">
+            <input type="checkbox" id="canonical" name="canonical">
+            <span class="switch"></span>
+            <span>Canonical k-mers <span class="t-sub">merge reverse complements</span></span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="include_ambiguous" name="include_ambiguous">
+            <span class="switch"></span>
+            <span>Include ambiguous bases <span class="t-sub">count k-mers with N, etc.</span></span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="fcgr" name="fcgr" checked>
+            <span class="switch"></span>
+            <span>FCGR heatmap <span class="t-sub">rendered for k ≤ 8</span></span>
+          </label>
+        </div>
       </div>
     </div>
 
-    <button type="submit" class="btn primary" id="analyze-btn">Analyze</button>
+    <button type="submit" class="btn primary" id="analyze-btn">Analyze sequences →</button>
   </form>
 </section>
 
 <div id="error-panel" class="error-panel hidden"></div>
-<div id="loading" class="loading hidden">Counting k-mers…</div>
+<div id="loading" class="loading hidden"><span class="spinner"></span> Counting k-mers…</div>
 
 <section id="results" class="results hidden">
   <h2>Results</h2>
+
+  <div class="composition hidden" id="composition">
+    <h3>Base composition</h3>
+    <div class="comp-bar" id="comp-bar"></div>
+    <div class="comp-legend" id="comp-legend"></div>
+  </div>
 
   <div class="cards" id="summary-cards"></div>
 
   <div class="warnings hidden" id="warnings"></div>
 
   <div class="export-row">
-    <button class="btn" id="export-csv">Export k-mer counts (CSV)</button>
-    <button class="btn" id="export-json">Export summary (JSON)</button>
+    <button class="btn" id="export-csv">↓ k-mer counts (CSV)</button>
+    <button class="btn" id="export-json">↓ Summary (JSON)</button>
   </div>
 
   <div class="chart-grid">
@@ -95,5 +124,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='main.js') }}"></script>
-<script>KmerLab.initAnalyzer();</script>
+<script>KmerLab.initRibbon(); KmerLab.initAnalyzer();</script>
 {% endblock %}

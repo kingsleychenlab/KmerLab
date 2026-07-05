@@ -3,11 +3,12 @@
 {% block nav_compare %}active{% endblock %}
 
 {% block content %}
-<section class="intro">
-  <h1>Compare two files</h1>
+<section class="hero hero-small">
+  <span class="eyebrow">Two-file comparison</span>
+  <h1>How similar are two datasets?</h1>
   <p class="lead">
-    Count k-mers in two FASTA/FASTQ files and measure how similar their k-mer
-    profiles are using Jaccard and cosine similarity.
+    Count k-mers in two files and measure overlap with Jaccard similarity
+    (shared k-mer sets) and cosine similarity (frequency vectors).
   </p>
 </section>
 
@@ -16,59 +17,72 @@
     <div class="two-col">
       <div class="field">
         <label for="file_a">File A</label>
-        <input type="file" id="file_a" name="file_a" accept=".fa,.fasta,.fq,.fastq,.gz,.txt">
+        <label class="dropzone" id="dropzone-a" for="file_a">
+          <span class="dz-title"><b>Choose File A</b> or drag it here</span>
+          <span class="dz-sub">.fa · .fasta · .fq · .fastq · .gz</span>
+          <input type="file" id="file_a" name="file_a" accept=".fa,.fasta,.fq,.fastq,.gz,.txt">
+        </label>
         <div class="sample-loader">
-          <span>or sample:</span>
+          <span>Sample:</span>
           <select id="sample-a"><option value="">— choose —</option></select>
         </div>
       </div>
       <div class="field">
         <label for="file_b">File B</label>
-        <input type="file" id="file_b" name="file_b" accept=".fa,.fasta,.fq,.fastq,.gz,.txt">
+        <label class="dropzone" id="dropzone-b" for="file_b">
+          <span class="dz-title"><b>Choose File B</b> or drag it here</span>
+          <span class="dz-sub">.fa · .fasta · .fq · .fastq · .gz</span>
+          <input type="file" id="file_b" name="file_b" accept=".fa,.fasta,.fq,.fastq,.gz,.txt">
+        </label>
         <div class="sample-loader">
-          <span>or sample:</span>
+          <span>Sample:</span>
           <select id="sample-b"><option value="">— choose —</option></select>
         </div>
       </div>
     </div>
 
     <div class="controls">
-      <div class="field small">
-        <label for="k-cmp">k (k-mer length)</label>
+      <div class="field">
+        <label for="k-cmp">k (length)</label>
         <input type="number" id="k-cmp" name="k" value="4" min="1" max="31">
       </div>
-      <div class="field checks">
-        <label class="check">
-          <input type="checkbox" id="canonical-cmp" name="canonical">
-          Canonical k-mers
-        </label>
-        <label class="check">
-          <input type="checkbox" id="ambiguous-cmp" name="include_ambiguous">
-          Include ambiguous bases
-        </label>
+      <div class="field" style="grid-column: span 2; min-width: 240px;">
+        <label>Options</label>
+        <div class="toggles">
+          <label class="toggle">
+            <input type="checkbox" id="canonical-cmp" name="canonical">
+            <span class="switch"></span>
+            <span>Canonical k-mers <span class="t-sub">merge reverse complements</span></span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="ambiguous-cmp" name="include_ambiguous">
+            <span class="switch"></span>
+            <span>Include ambiguous bases</span>
+          </label>
+        </div>
       </div>
     </div>
 
-    <button type="submit" class="btn primary" id="compare-btn">Compare</button>
+    <button type="submit" class="btn primary" id="compare-btn">Compare profiles →</button>
   </form>
 </section>
 
 <div id="error-panel" class="error-panel hidden"></div>
-<div id="loading" class="loading hidden">Comparing k-mer profiles…</div>
+<div id="loading" class="loading hidden"><span class="spinner"></span> Comparing k-mer profiles…</div>
 
 <section id="compare-results" class="results hidden">
   <h2>Comparison</h2>
   <div class="cards" id="compare-cards"></div>
 
   <div class="export-row">
-    <button class="btn" id="export-cmp-json">Export comparison (JSON)</button>
-    <button class="btn" id="export-cmp-csv">Export comparison (CSV)</button>
+    <button class="btn" id="export-cmp-json">↓ Comparison (JSON)</button>
+    <button class="btn" id="export-cmp-csv">↓ Comparison (CSV)</button>
   </div>
 
   <div class="two-col" id="file-stats"></div>
 
-  <div class="chart-box">
-    <h3>Top k-mers: File A vs File B</h3>
+  <div class="chart-box" style="margin-top: 22px;">
+    <h3>Top k-mers · File A vs File B</h3>
     <img id="chart-compare" alt="Comparison bar chart">
   </div>
 </section>

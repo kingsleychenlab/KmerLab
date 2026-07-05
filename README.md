@@ -38,6 +38,8 @@ real (small-to-medium) files — without giving up privacy or fighting a CLI.
   non-ACGT characters); invalid bases are reported cleanly, never silently.
 - **Summary stats**: total sequences, total bases, valid k-mers, unique k-mers,
   GC content, skipped k-mers, invalid bases, sequence-length stats.
+- **Base composition** bar (A/C/G/T/other) using the sequencing-chromatogram
+  nucleotide colour system that runs through the whole UI.
 - **Visualizations**: top-k-mer bar chart, k-mer frequency spectrum histogram,
   and an optional **FCGR** (Frequency Chaos Game Representation) heatmap.
 - **Compare two files**: shared k-mers, unique-to-A, unique-to-B, **Jaccard**

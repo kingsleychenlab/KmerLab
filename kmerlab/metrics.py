@@ -29,6 +29,24 @@ def gc_content(records: Iterable[SeqRecord]) -> float:
     return gc / total if total else 0.0
 
 
+def base_composition(records: Iterable[SeqRecord]) -> dict:
+    """Return per-base counts and fractions for A/C/G/T and 'other'.
+
+    'other' aggregates every non-ACGT character (N, gaps, IUPAC ambiguity
+    codes). Fractions are over all characters so they always sum to ~1.0.
+    """
+    counts = {"A": 0, "C": 0, "G": 0, "T": 0, "other": 0}
+    for rec in records:
+        for base in rec.sequence.upper():
+            if base in counts:
+                counts[base] += 1
+            else:
+                counts["other"] += 1
+    total = sum(counts.values()) or 1
+    fractions = {b: counts[b] / total for b in counts}
+    return {"counts": counts, "fractions": fractions}
+
+
 def sequence_length_stats(records: list[SeqRecord]) -> dict:
     """Return min/max/mean sequence length (0 if empty)."""
     lengths = [len(r.sequence) for r in records]
@@ -54,6 +72,7 @@ def summarize(result: KmerResult, records: list[SeqRecord], top_n: int = 20) -> 
         "skipped_kmers": result.skipped_kmers,
         "invalid_bases": result.invalid_bases,
         "gc_content": round(gc_content(records), 6),
+        "base_composition": base_composition(records),
         "length_stats": sequence_length_stats(records),
         "top_kmers": [
             {"kmer": km, "count": c} for km, c in result.top(top_n)
